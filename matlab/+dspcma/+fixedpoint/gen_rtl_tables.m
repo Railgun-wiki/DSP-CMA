@@ -15,11 +15,11 @@ lines{end+1} = '`ifndef FFT_TWIDDLE_TABLES_VH';
 lines{end+1} = '`define FFT_TWIDDLE_TABLES_VH';
 for N = [32, 64]
     lines{end+1} = sprintf('');
-    lines{end+1} = sprintf('function [33:0] fft_tw%d(input integer stage, input integer m);', N);
+    lines{end+1} = sprintf('function [34:0] fft_tw%d(input integer stage, input integer m);', N);
     lines{end+1} = '    reg signed [15:0] w_re, w_im;';
-    lines{end+1} = '    reg [1:0] spec;';
+    lines{end+1} = '    reg [2:0] spec;';
     lines{end+1} = '    begin';
-    lines{end+1} = '        spec = 2''d0; w_re = 16''sd0; w_im = 16''sd0;';
+    lines{end+1} = '        spec = 3''d0; w_re = 16''sd0; w_im = 16''sd0;';
     lines{end+1} = '        case (stage)';
     stages = log2(N);
     for s = 0:stages-1
@@ -29,17 +29,17 @@ for N = [32, 64]
         for m = 0:M-1
             [W, spec] = dspcma.fixedpoint.twiddle_q15(M, m);
             if spec == 0
-                lines{end+1} = sprintf('                    %0d: begin spec = 2''d0; w_re = 16''sd%0d; w_im = 16''sd%0d; end', ...
-                    m, W(1), W(2));
+                lines{end+1} = sprintf('                    %0d: begin spec = 3''d0; w_re = %s; w_im = %s; end', ...
+                    m, s16lit(W(1)), s16lit(W(2)));
             else
-                lines{end+1} = sprintf('                    %0d: spec = 2''d%0d;', m, spec);
+                lines{end+1} = sprintf('                    %0d: spec = 3''d%0d;', m, spec);
             end
         end
-        lines{end+1} = sprintf('                    default: spec = 2''d0;');
+        lines{end+1} = sprintf('                    default: spec = 3''d0;');
         lines{end+1} = sprintf('                endcase');
         lines{end+1} = sprintf('            end');
     end
-    lines{end+1} = sprintf('            default: begin spec = 2''d0; end');
+    lines{end+1} = sprintf('            default: begin spec = 3''d0; end');
     lines{end+1} = sprintf('        endcase');
     lines{end+1} = sprintf('        fft_tw%d = {spec, w_re, w_im};', N);
     lines{end+1} = sprintf('    end');
@@ -55,6 +55,15 @@ cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
 fprintf(fid, '%s\n', lines{:});
 info.file = cfg.rtl_tables_file;
 info.sha256 = sha_of(cfg.rtl_tables_file);
+end
+
+function t = s16lit(v)
+%S16LIT Verilog 有符号字面量: 负数必须写作 -16'sdN
+if v < 0
+    t = sprintf('-16''sd%0d', -v);
+else
+    t = sprintf('16''sd%0d', v);
+end
 end
 
 function h = sha_of(path)

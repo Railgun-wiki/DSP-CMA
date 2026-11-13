@@ -21,13 +21,13 @@ rng_seed_backup = cfg.rng_seed;
 
 for N = [32, 64]
     % ---- 用例定义 ----
-    defs = {
+    defs = {   % 名称统一 8 字符, 便于 TB 纯拼接构路径
         'impulse0',  '冲激 e0',                       @() case_impulse(N, 1)
         'impulsel',  '末位冲激',                       @() case_impulse(N, N)
         'constant',  '常数 100(1+1j)',                 @() (100 * ones(N,1) + 1j * 100 * ones(N,1))
-        'toneq',     '1/4 频点音 幅90',                @() case_tone(N)
-        'random',    '均匀随机整数',                    @() case_random(N, 2)
-        'extreme',   '极值 +127/-128',                 @() case_extreme(N)
+        'toneq000',  '1/4 频点音 幅90',                @() case_tone(N)
+        'random00',  '均匀随机整数',                    @() case_random(N, 2)
+        'extreme0',  '极值 +127/-128',                 @() case_extreme(N)
     };
     frames_per_case = 8;   % 每用例 8 帧（连续帧测试用），random/extreme 每帧不同
     for c = 1:size(defs, 1)
@@ -35,11 +35,11 @@ for N = [32, 64]
         base = defs{c, 3}();
         Xin = zeros(N, frames_per_case);
         for f = 1:frames_per_case
-            if strcmp(name, 'random') || strcmp(name, 'extreme')
+            if strncmp(name, 'random', 6) || strncmp(name, 'extreme', 7)
                 switch name
-                    case 'random'
+                    case 'random00'
                         Xin(:, f) = randi([-100 100], N, 1) + 1j*randi([-100 100], N, 1);
-                    case 'extreme'
+                    case 'extreme0'
                         x0 = 127 * (2 * (randi([0 1], N, 1) > 0.5) - 1);
                         x0(randi([1 N], 1)) = -128;
                         Xin(:, f) = x0;
