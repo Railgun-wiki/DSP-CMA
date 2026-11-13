@@ -127,6 +127,7 @@ module tb_fft32;
     endtask
 
     integer lat_cnt, lat_seen;
+    reg [1023:0] vdir;   // 向量目录: +vectors=<dir>, 默认 rtl/tb/vectors
     task run_case(input integer ci, input integer meas_lat);
         reg [63:0] n8;
         begin
@@ -138,8 +139,8 @@ module tb_fft32;
                 4: n8 = "random00";
                 5: n8 = "extreme0";
             endcase
-            read_file({"rtl/tb/vectors/fft32_in_", n8, ".mem"}, 0);
-            read_file({"rtl/tb/vectors/fft32_exp_", n8, ".mem"}, 1);
+            read_file({vdir, "/fft32_in_", n8, ".mem"}, 0);
+            read_file({vdir, "/fft32_exp_", n8, ".mem"}, 1);
 
             // ---- 相位 A: 连续流 + 可选延迟测量 ----
             out_frames = 0;
@@ -213,6 +214,8 @@ module tb_fft32;
     initial begin
         errors = 0;
         out_frames = 0;
+        if (!$value$plusargs("vectors=%s", vdir))
+            vdir = "rtl/tb/vectors";
         rst = 1; in_valid = 0; din = 0;
         repeat (4) @(negedge clk);
         rst = 0;
