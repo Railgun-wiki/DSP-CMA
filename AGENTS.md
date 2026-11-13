@@ -54,7 +54,7 @@
 - 普通实现决策自行推进，并写入架构决策记录。需求冲突、不可恢复的数据修改、真实外部支出等才需要明确用户决策。
 - 不引入网页、服务端、数据库、容器编排等与课程目标无关的系统。优先直接函数、脚本和文本配置，避免过度封装。
 - 不自动提交、推送、发布或删除用户文件；不将报告、实现工具或测试状态伪装为已完成。
-- 用户授权 Git 提交后，必须采用 Conventional Commits：`type(scope): description`，scope 可省略。使用 `feat/fix/docs/test/refactor/build/ci/chore/perf` 等适当类型；例如本规范提交使用 `docs: define project standards and construction goal`。提交前检查暂存差异与相关验证，不把生成文件、凭据或无关修改混入提交；推送仍需用户授权。
+- 用户授权 Git 提交后，采用类似 Linux 的 `模块: 内容` 格式：前缀表示实际受影响的模块或子系统，例如 `fft`、`convolution`、`cma`、`rtl/fft`、`agents`、`docs`；冒号后加一个空格，以简洁动词短语描述具体改动。例如 `fft: correct bit-reversal indexing`、`cma: align tap update timing`、`rtl/fft: align multiplier valid pipeline`。涉及多个模块时选择共同子系统，彼此独立的改动拆分提交。复杂改动在正文解释原因、行为变化和验证结果。提交前检查暂存差异与相关验证，不把生成文件、凭据或无关修改混入提交；推送仍需用户授权。
 
 ## 3. 目标目录与模块边界
 
