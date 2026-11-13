@@ -1,0 +1,29 @@
+# Local agent configuration and credentials
+/.agents/
+/.aws/
+/.codex/
+
+# Reproducible copies extracted from docs/requirement/
+/data/reference/
+
+# Generated experiments and tool work directories
+/results/
+/build/
+/.Xil/
+*.cache/
+*.gen/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+*.jou
+*.wdb
+*.vcd
+*.asv
+
+# Local editor and operating system files
+.DS_Store
+*~
+__pycache__/
+*.pyc
+.venv/
