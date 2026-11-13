@@ -1,0 +1,30 @@
+{
+  "docs/requirement/大作业matlab.zip": {
+    "sha256": "4226ecc3c495f88499a23bdd1912f6a1738e4e096c7b857af917e29051e54dc5",
+    "bytes": 19647844
+  },
+  "docs/requirement/微信图片_20261114013336_212_2.jpg": {
+    "sha256": "b4a2870174230c3f3b69cbd9232781bf12a15eaa8b1ff3dd2797e148af377cac",
+    "bytes": 328591
+  },
+  "docs/requirement/微信图片_20261114013341_213_2.jpg": {
+    "sha256": "9973b620f92673a8f868e81e2400aa663f6948587503dc8eb5ac42a4f7d4343e",
+    "bytes": 664545
+  },
+  "data/reference/Readme.txt": {
+    "sha256": "2e91fdba7314c2e6eac57ac0601718e72f7e3c5e8b267868d101e69586c3baa4",
+    "bytes": 129
+  },
+  "data/reference/CMA_homework.m": {
+    "sha256": "6edda458503cb0356c3d0a0124e81266a56a93ffaf0237958650ce26cc7db8ee",
+    "bytes": 1144
+  },
+  "data/reference/CMA_reference.m": {
+    "sha256": "cadf880492d34056c1880ce2d2f425d04332a3593c8bac5e0cf2ca5e4b11d908",
+    "bytes": 4748
+  },
+  "data/reference/TD_TRdata.mat": {
+    "sha256": "120c34e101ef279312dcb6c9c5df7dc533e6884f2845a9322f0c98a2d63278ce",
+    "bytes": 19638421
+  }
+}
