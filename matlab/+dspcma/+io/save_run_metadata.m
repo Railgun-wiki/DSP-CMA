@@ -13,8 +13,8 @@ D = dir(cfg.data_mat);
 if ~isempty(D)
     meta.data_bytes = D.bytes;
     try
-        md = dspcma.io.load_tdtr(cfg);
-        meta.data_sha256 = md.sha256;
+        [~, ~, mdm] = dspcma.io.load_tdtr(cfg);
+        meta.data_sha256 = mdm.sha256;
     catch
         meta.data_sha256 = 'unavailable';
     end

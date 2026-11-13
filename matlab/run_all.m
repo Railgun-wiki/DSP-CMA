@@ -31,10 +31,10 @@ summary.out_dir = out_dir;
 
 % ---- 1. 全部单元测试 ----
 ts = run_tests([], cfg);
-summary.tests = ts.tests;
+summary.tests = num2cell(ts.tests);   % cell of structs (JSON 数组)
 summary.tests_pass = ts.n_pass;
 summary.tests_total = ts.n_total;
-dspcma.io.save_json(fullfile(out_dir, 'tests_summary.json'), ts);
+dspcma.io.save_json(fullfile(out_dir, 'tests_summary.json'), summary);
 
 % ---- 2. 卷积演示（用户可指定信号与滤波器） ----
 n_demo = round(cfg.conv_demo.signal_len * (getfield_default(cfg, 'quick_scale', 1)));
@@ -92,7 +92,11 @@ end
 
 function h = fir_demo(L)
 %FIR_DEMO 演示用色散滤波器（升余弦滚降 + 相位斜率）。
+% 显式 sinc 实现，不依赖 Signal Processing Toolbox（AGENTS 2）。
 t = (0:L-1).' - (L - 1) / 2;
-h = sinc(t / 6) .* exp(-1j * 0.4 * t);
+sc = ones(L, 1);
+nz = t ~= 0;
+sc(nz) = sin(pi * t(nz) ./ 6) ./ (pi * t(nz) / 6);
+h = sc .* exp(-1j * 0.4 * t);
 h = h / sqrt(sum(abs(h).^2));
 end

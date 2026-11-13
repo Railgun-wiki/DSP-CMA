@@ -183,7 +183,13 @@ res.before = strip_samples(res.before);
 if isfield(res, 'time_baseline')
     res.time_baseline.cost = [];
 end
-dspcma.io.save_json(fullfile(out_dir, 'metrics_tapsweep.json'), res);
+% struct 数组转 cell of structs (仅保存副本), 保证 jsonencode 输出
+% JSON 数组; 返回值 res.taps 保持 struct 数组
+res_save = res;
+if ~isempty(res_save.taps) && isstruct(res_save.taps)
+    res_save.taps = num2cell(res_save.taps);
+end
+dspcma.io.save_json(fullfile(out_dir, 'metrics_tapsweep.json'), res_save);
 end
 
 % ================= 内部函数 =================
