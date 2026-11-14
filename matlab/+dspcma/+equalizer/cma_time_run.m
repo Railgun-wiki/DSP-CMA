@@ -18,12 +18,30 @@ function out = cma_time_run(x, y, cfg)
 %
 % 仅承诺 clk_dly = 1；其他值拒绝（DSPCMA:cma:clkDly）。
 
-x = check_pair(x, y);
+[x, y] = check_pair(x, y);
 seg_len = cfg.seg_len; tap_len = cfg.tap_len;
 clk_dly = cfg.clk_dly; par_num = cfg.par_num;
 step = cfg.step; Rx = cfg.Rx; Ry = cfg.Ry;
 if clk_dly ~= 1
     error('DSPCMA:cma:clkDly', '仅承诺 clk_dly=1（与参考一致），收到 %d', clk_dly);
+end
+if numel(x) < seg_len
+    error('DSPCMA:cma:tooShort', '输入长度 %d 不足一段 (%d 点)', numel(x), seg_len);
+end
+if ~isscalar(seg_len) || seg_len < 1 || mod(seg_len, 1) ~= 0
+    error('DSPCMA:cma:badCfg', 'seg_len 必须为 >= 1 整数');
+end
+if ~isscalar(tap_len) || tap_len < 1 || mod(tap_len, 2) == 0
+    error('DSPCMA:cma:badCfg', 'tap_len 必须为正奇数');
+end
+if ~isscalar(par_num) || par_num < 1 || mod(par_num, 1) ~= 0
+    error('DSPCMA:cma:badCfg', 'par_num 必须为 >= 1 整数');
+end
+if ~isscalar(step) || step < 0
+    error('DSPCMA:cma:badCfg', 'step 必须为非负标量 (0 = 抽头冻结)');
+end
+if ~isscalar(Rx) || Rx <= 0 || ~isscalar(Ry) || Ry <= 0
+    error('DSPCMA:cma:badCfg', 'Rx/Ry 必须为正标量');
 end
 
 seg_num = floor(numel(x) / seg_len);
@@ -120,7 +138,7 @@ if exist('tap_hist_xx', 'var')
 end
 end
 
-function x = check_pair(x, y)
+function [x, y] = check_pair(x, y)
 if ~isvector(x) || ~isvector(y) || isempty(x) || isempty(y)
     error('DSPCMA:cma:badShape', 'x 与 y 必须为非空向量');
 end
@@ -130,7 +148,7 @@ end
 if any(~isfinite(x(:))) || any(~isfinite(y(:)))
     error('DSPCMA:cma:notFinite', '输入含 NaN/Inf');
 end
-x = complex(double(x(:)));
+x = complex(double(x(:)));   % 两路统一转列向量并返回 (F06 整改)
 y = complex(double(y(:)));
 end
 

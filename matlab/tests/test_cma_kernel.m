@@ -163,7 +163,49 @@ for tl = [17 65]
         sprintf('rel=%.2e', max(rel(cf.zx, ct.zx), rel(cf.final.xx, ct.final.xx))));
 end
 
-% ---- 7) clk_dly ~= 1 拒绝 ----
+% ---- 7) 行向量输入、短输入、非法配置 (F06 整改) ----
+n5 = 8 * cfg.par_num * cfg.seg_len;
+[xr0, yr0] = channel(gen_4qam(n5), gen_4qam(n5), 5);
+xr = xr0.'; yr = yr0.';                 % 行向量
+ctr = dspcma.equalizer.cma_time_run(xr, yr, cfg1);
+cfr = dspcma.equalizer.cma_freq_run(xr, yr, cfg1);
+ct0 = dspcma.equalizer.cma_time_run(xr0, yr0, cfg1);
+cf0 = dspcma.equalizer.cma_freq_run(xr0, yr0, cfg1);
+add('行向量与列向量结果一致', rel(ctr.zx, ct0.zx) <= thresh && rel(cfr.zx, cf0.zx) <= thresh ...
+    && rel(ctr.final.xx, ct0.final.xx) <= thresh, ...
+    sprintf('%.2e', max(rel(ctr.zx, ct0.zx), rel(cfr.zx, cf0.zx))));
+short_ok = true;
+try
+    dspcma.equalizer.cma_time_run(xr0(1:10), yr0(1:10), cfg1);
+    short_ok = false;
+catch err
+    short_ok = strcmp(err.identifier, 'DSPCMA:cma:tooShort');
+end
+try
+    dspcma.equalizer.cma_freq_run(xr0(1:10), yr0(1:10), cfg1);
+    short_ok = false;
+catch err
+    short_ok = short_ok && strcmp(err.identifier, 'DSPCMA:cma:tooShort');
+end
+add('短输入显式拒绝', short_ok, 'DSPCMA:cma:tooShort');
+cfgb = cfg; cfgb.tap_len = 32;          % 偶数抽头
+badcfg = true;
+try
+    dspcma.equalizer.cma_freq_run(xr0, yr0, cfgb);
+    badcfg = false;
+catch err
+    badcfg = strcmp(err.identifier, 'DSPCMA:cma:badCfg');
+end
+try
+    cfgb2 = cfg; cfgb2.step = -1;
+    dspcma.equalizer.cma_freq_run(xr0, yr0, cfgb2);
+    badcfg = false;
+catch err
+    badcfg = badcfg && strcmp(err.identifier, 'DSPCMA:cma:badCfg');
+end
+add('非法配置显式拒绝', badcfg, 'DSPCMA:cma:badCfg');
+
+% ---- 8) clk_dly ~= 1 拒绝 ----
 cfgd = cfg;
 cfgd.clk_dly = 2;
 ok_dly = true;
