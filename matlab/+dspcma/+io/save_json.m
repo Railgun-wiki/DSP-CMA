@@ -21,12 +21,21 @@ fprintf(fid, '%s\n', txt);
 end
 
 function out = with_subs(v)
-%WITH_SUBS 递归将复数转为 {re, im} 结构，其余类型保持。
+%WITH_SUBS 递归归一化: 复数转 {re, im}; 结构体数组转 cell of structs
+% (F03 整改: 旧实现只读 v(1), 静默丢弃数组元素); 元胞逐元素递归。
 if isstruct(v)
-    out = struct();
-    fn = fieldnames(v);
-    for k = 1:numel(fn)
-        out.(fn{k}) = with_subs(v(1).(fn{k}));
+    n = numel(v);
+    if n > 1
+        out = cell(1, n);
+        for k = 1:n
+            out{k} = with_subs(v(k));
+        end
+    else
+        out = struct();
+        fn = fieldnames(v);
+        for k = 1:numel(fn)
+            out.(fn{k}) = with_subs(v(1).(fn{k}));
+        end
     end
 elseif iscell(v)
     out = cell(size(v));

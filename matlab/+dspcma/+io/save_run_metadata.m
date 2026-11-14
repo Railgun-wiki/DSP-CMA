@@ -35,7 +35,9 @@ end
 
 function v = detect_git()
 v = 'no-git';
-[st, out] = system('git rev-parse --short HEAD 2>/dev/null');
+% 以本文件位置定位仓库 (F05 整改: 不依赖当前工作目录)
+repo = fileparts(fileparts(fileparts(fileparts(mfilename('fullpath')))));
+[st, out] = system(sprintf('git -C "%s" rev-parse --short HEAD 2>/dev/null', repo));
 if st == 0 && ~isempty(out)
     v = strtrim(out);
 end
