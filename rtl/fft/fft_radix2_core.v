@@ -18,7 +18,19 @@ module fft_radix2_core #(
     output wire                 out_valid,
     output reg  [31:0]          sat_cnt    // 发生饱和的帧计数
 );
-    localparam integer S = $clog2(N);
+    // ceil(log2(N)) 常量函数 (Verilog-2001 无 $clog2)
+    function integer clog2p(input integer value);
+        integer v;
+        begin
+            v = value;
+            clog2p = 0;
+            while (v > 1) begin
+                clog2p = clog2p + 1;
+                v = (v + 1) / 2;
+            end
+        end
+    endfunction
+    localparam integer S = clog2p(N);
 `include "fft_twiddle_tables.vh"
 
     genvar gk, gs, gb, gj;
@@ -107,9 +119,11 @@ module fft_radix2_core #(
     endgenerate
 
     // ---- 末级 Q8 -> 8 bit 半偶舍入 + 饱和 (1 拍) ----
-    function signed [7:0] q8_to_s8(input signed [15:0] v, inout sat_o);
+    // 返回 {sat, q[7:0]}
+    function [8:0] q8_round_sat(input signed [15:0] v);
         reg signed [15:0] base;
         reg signed [15:0] q;
+        reg sat_o;
         begin
             base = v >>> 8;
             if (v[7:0] > 8'd128)
@@ -126,8 +140,10 @@ module fft_radix2_core #(
             end else if (q < -16'sd128) begin
                 q = -16'sd128;
                 sat_o = 1'b1;
+            end else begin
+                sat_o = 1'b0;
             end
-            q8_to_s8 = q[7:0];
+            q8_round_sat = {sat_o, q[7:0]};
         end
     endfunction
 
@@ -149,16 +165,16 @@ module fft_radix2_core #(
         any_sat = 1'b0; sat_any_stage = 1'b0;
         for (si = 0; si < S*N/2; si = si + 1)
             sat_any_stage = sat_any_stage | sat_w[si];
-        any_sat = 1'b0;
         for (fk = 0; fk < N; fk = fk + 1) begin
             vre = stg_re[(S-1)*N + fk];
             vim = stg_im[(S-1)*N + fk];
-            ore = q8_to_s8(vre, any_sat);
-            oim = q8_to_s8(vim, any_sat);
+            {any_sat, ore} = q8_round_sat(vre);
+            {any_sat, oim} = q8_round_sat(vim);
             dout_next[16*fk +: 8]     = ore;
             dout_next[16*fk + 8 +: 8] = oim;
+            sat_any_stage = sat_any_stage | any_sat;
         end
-        sat_next = any_sat | sat_any_stage;
+        sat_next = sat_any_stage;
     end
 
     always @(posedge clk) begin

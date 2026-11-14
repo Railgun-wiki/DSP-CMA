@@ -79,11 +79,13 @@ module bfly2 #(
         ext_m = {{2{v[30]}}, v};
     endfunction
 
-    // 半偶舍入 Q23 -> Q8 并饱和 (与 MATLAB q23_to_q8 逐位一致)
-    function signed [15:0] q23_to_q8(input signed [32:0] t, output sat_o);
+    // 半偶舍入 Q23 -> Q8 并饱和 (与 MATLAB q23_to_q8 逐位一致)。
+    // 返回 {sat, q[15:0]}, 避免函数输出形参 (Verilog-2001 保守口径)。
+    function [16:0] q23_round_sat(input signed [32:0] t);
         reg signed [32:0] base;
         reg [15:0] rem;
         reg signed [32:0] q;
+        reg sat_o;
         begin
             base = t >>> 16;          // 算术右移 = floor 除法
             rem  = t[15:0];           // floor 语义下余数非负
@@ -104,7 +106,7 @@ module bfly2 #(
             end else begin
                 sat_o = 1'b0;
             end
-            q23_to_q8 = q[15:0];
+            q23_round_sat = {sat_o, q[15:0]};
         end
     endfunction
 
@@ -121,17 +123,19 @@ module bfly2 #(
         output sat_o
     );
         reg signed [32:0] sum_t, sum_b;
-        reg s1, s2, s3, s4;
+        reg [16:0] ru, rv, rui, rvi;
         begin
             sum_t = ext_a(are) + ext_m(mre);    // Q23 有符号
             sum_b = ext_a(are) - ext_m(mre);
-            ure = q23_to_q8(sum_t, s1);
-            vre = q23_to_q8(sum_b, s2);
+            ru = q23_round_sat(sum_t);
+            rv = q23_round_sat(sum_b);
             sum_t = ext_a(aim) + ext_m(mim);
             sum_b = ext_a(aim) - ext_m(mim);
-            uim = q23_to_q8(sum_t, s3);
-            vim = q23_to_q8(sum_b, s4);
-            sat_o = s1 | s2 | s3 | s4;
+            rui = q23_round_sat(sum_t);
+            rvi = q23_round_sat(sum_b);
+            ure = ru[15:0]; uim = rui[15:0];
+            vre = rv[15:0]; vim = rvi[15:0];
+            sat_o = ru[16] | rv[16] | rui[16] | rvi[16];
         end
     endtask
 
