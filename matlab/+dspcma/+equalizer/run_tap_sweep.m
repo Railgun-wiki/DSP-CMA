@@ -74,6 +74,11 @@ for ti = 1:numel(cfg.tap_sweep)
     t0 = tic;
     runF = dspcma.equalizer.cma_freq_run(rx, ry, cfg_t);
     t_run = toc(t0);
+    if t == tap_plot
+        zx_plot = runF.zx;
+        zy_plot = runF.zy;
+        runF_plot = runF;
+    end
 
     after = pol_metrics(runF.zx, runF.zy, ca, ev, cfg.ideal_4qam);
     cost = dspcma.metrics.cma_cost(runF.errx, runF.erry, cfg.seg_len, cfg.par_num);
@@ -177,6 +182,12 @@ grid on;
 ylabel('DD-EVM (%)');
 title('不同抽头长度均衡后 DD-EVM（评估窗 131072 点）');
 dspcma.io.save_figure(fig, fullfile(out_dir, 'tapsweep_evm.png'));
+
+% ---- 信道诊断 (双偏振, F05/F04 整改: 随正式运行落盘) ----
+res.diag = dspcma.equalizer.channel_diagnosis(cfg, zx_plot, zy_plot, out_dir);
+
+% ---- 未经校准的均衡输出与校准参数 (F05 整改: 完整复现材料) ----
+save(fullfile(out_dir, 'cma_outputs.mat'), 'zx_plot', 'zy_plot', 'runF_plot', '-v7.3');
 
 % ---- 指标 JSON（仅标量，不含逐点样本） ----
 res.before = strip_samples(res.before);

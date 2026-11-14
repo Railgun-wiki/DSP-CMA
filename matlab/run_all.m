@@ -74,12 +74,38 @@ catch fp_err
     fprintf('!! 定点导出失败: %s\n', summary.fixedpoint_error);
 end
 
-% ---- 5. 汇总 ----
+% ---- 5. 配置快照 (F05 整改: 完整复现材料) ----
+dspcma.io.save_json(fullfile(out_dir, 'config.json'), cfg);
+
+% ---- 6. 汇总与验收门槛 (F08 整改: 证据落盘后显式抛错) ----
 summary.all_tests_pass = (ts.n_pass == ts.n_total);
 summary.fixedpoint_ok = fp_ok;
+
+% 验收门槛 (AGENTS 4.4: 两路 EVM 均改善、输出有限且收敛稳定)
+idx_tap = find([res.taps.tap_len] == res.tap_plot, 1);
+tap_d = res.taps(idx_tap);
+gates.tests = summary.all_tests_pass;
+gates.fixedpoint = fp_ok;
+gates.evm_improve_x = tap_d.after.x.evm_pct < res.before.x.evm_pct;
+gates.evm_improve_y = tap_d.after.y.evm_pct < res.before.y.evm_pct;
+gates.finite = isfield(res, 'taps') && all([res.taps.finite]);
+gates.not_degenerate = tap_d.rho < 0.9;   % 工程默认: rho<0.9 视为未退化为同一路
+summary.gates = gates;
+summary.gates_all_pass = all(structfun(@(v) islogical(v) & v, gates));
+summary.blocked = struct('vivado', 'BLOCKED: 本机无 Vivado, 仿真/Implementation 待补跑');
+summary.not_run = struct('octave', 'NOT_RUN: 本机无 Octave');
 dspcma.io.save_json(fullfile(out_dir, 'summary.json'), summary);
 fprintf('== 完成: 测试 %d/%d, 定点导出 %d ==\n', ts.n_pass, ts.n_total, fp_ok);
+fprintf('== 门槛: %d/5 PASS (Vivado=BLOCKED, Octave=NOT_RUN) ==\n', ...
+    sum(structfun(@(v) islogical(v) & v, gates)));
 fprintf('== 结果目录: %s ==\n', out_dir);
+if ~summary.gates_all_pass
+    fn = fieldnames(gates);
+    vals = structfun(@(x) x, gates);
+    bad = strjoin(fn(~vals), ', ');
+    error('DSPCMA:run:gateFailed', '验收门槛未通过: %s — 见 %s/summary.json', ...
+        bad, out_dir);
+end
 end
 
 function v = getfield_default(s, name, v0)

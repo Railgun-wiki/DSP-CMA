@@ -1,4 +1,4 @@
-function res = channel_diagnosis(cfg, zx, out_dir)
+function res = channel_diagnosis(cfg, zx, zy, out_dir)
 %CHANNEL_DIAGNOSIS 信道相位特性诊断（均衡结果解释的证据链）。
 %
 % 背景: 实验数据显示均衡后星座为等模圆环、相位逐符号均匀随机。
@@ -13,7 +13,9 @@ function res = channel_diagnosis(cfg, zx, out_dir)
 % 诊断结论: 相位随机化存在于原始数据（相干度~0.01），CMA（对相位盲）
 % 无法也无需处理；残余 DD-EVM 由该特性决定。
 %
-% 输入 zx 为某偏振的均衡输出（全长）；rx 由 cfg 重新载入。
+% 输入 zx/zy 为两偏振的均衡输出（全长）；rx 由 cfg 重新载入。
+% F04 整改: 新增 z^4 滞后相关 (含打乱对照, 证据时间结构) 与两偏振
+% ±maxlag 延迟搜索互相关 (零延迟值不足以证明独立解复用)。
 
 if nargin < 3
     out_dir = tempdir;
@@ -33,6 +35,48 @@ res.ring_floor_evm_pct = 100 * sqrt((4 - 4 * ecos) / 2);
 % 模值收敛统计（CMA 目标 R=2）
 res.modulus_sq_mean = mean(abs(zx).^2);
 res.modulus_sq_std = std(abs(zx).^2);
+
+% ---- z^4 滞后自相关: 原序列 vs 打乱对照 (时间结构证据, F04 整改)。
+% 若逐符号独立均匀相位成立, 滞后相关应接近打乱对照; 显著高于对照
+% 说明存在时间结构, 信道模型需另行认定 (不在此指定具体模型)。
+rs = RandStream('twister', 'Seed', 20261114);   % 局部流, 不污染全局
+wz = zx .^ 4;
+wz = wz - mean(wz);
+lags_z4 = [1 64 256];
+res.z4_lags = lags_z4;
+res.z4_lag_corr = zeros(1, numel(lags_z4));
+res.z4_lag_corr_shuffled = zeros(1, numel(lags_z4));
+wperm = wz(randperm(rs, numel(wz)));
+for k = 1:numel(lags_z4)
+    L = lags_z4(k);
+    res.z4_lag_corr(k) = abs(mean(wz(1:end-L) .* conj(wz(1+L:end)))) / mean(abs(wz).^2);
+    res.z4_lag_corr_shuffled(k) = abs(mean(wperm(1:end-L) .* conj(wperm(1+L:end)))) / mean(abs(wperm).^2);
+end
+
+% ---- 两偏振互相关的延迟搜索 (±maxlag 内最大值, F04 整改):
+% 零延迟相关小不能证明两路独立, 需检查是否存在对齐后的延迟副本。
+rng(20261114, 'twister');
+cal_y = dspcma.metrics.calibrate_4qam(zy);
+sy_ = zy * exp(-1j * cal_y.phase) / cal_y.gain;
+cal_x = dspcma.metrics.calibrate_4qam(zx);
+sx_ = zx * exp(-1j * cal_x.phase) / cal_x.gain;
+maxlag = 64;
+nl = 2 * maxlag + 1;
+cc = zeros(1, nl);
+for L = -maxlag:maxlag
+    if L < 0
+        a = sx_(-L+1:end);
+        b = sy_(1:end+L);
+    else
+        a = sx_(1:end-L);
+        b = sy_(L+1:end);
+    end
+    cc(L + maxlag + 1) = abs(mean(a .* conj(b))) / sqrt(mean(abs(a).^2) * mean(abs(b).^2));
+end
+res.xcorr_maxlag = maxlag;
+res.xcorr_max = max(cc);
+res.xcorr_lag_at_max = find(cc == max(cc), 1) - maxlag - 1;
+res.xcorr_zero = cc(maxlag + 1);
 
 % 图: 折叠相位散点 + 直方图
 cal = dspcma.metrics.calibrate_4qam(zx);
