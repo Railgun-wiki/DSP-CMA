@@ -23,10 +23,18 @@ open_project [file join build/vivado dspcma.xpr]
 set_property top $TOP [current_fileset]
 update_compile_order -fileset sources_1
 
-# 引脚/时钟约束 (合成引脚, 非真实板级; 报告注明)
+# 引脚/时钟约束 (静态端口清单 + 合成引脚; F02 整改: 不在设计打开前
+# 查询 get_ports; 清理其他顶层遗留的约束文件避免积累)
 file mkdir build/vivado/constraints
-set XDC [file join build/vivado/constraints ${TOP}.xdc]
-make_pin_constraints $TOP $XDC
+foreach old [get_files -quiet -of_objects [get_filesets constrs_1]] {
+    remove_files -fileset [get_filesets constrs_1] $old
+}
+set XDC [file join [file normalize [file join build vivado constraints]] ${TOP}.xdc]
+if {$TOP eq "fft32_top"} {
+    make_pin_constraints $TOP 32 $XDC
+} else {
+    make_pin_constraints $TOP 64 $XDC
+}
 add_files -fileset constrs_1 $XDC
 
 # 综合 (fail 时 launch_runs 返回错误)

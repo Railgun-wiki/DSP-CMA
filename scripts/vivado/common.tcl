@@ -36,35 +36,35 @@ proc check_repo_root {} {
     }
 }
 
-# 为顶层端口生成引脚约束 (无实板, 引脚为合成选择: HP bank LVCMOS12)。
-# 目的: 让 Implementation 完整跑通布局布线; 报告中注明引脚非真实板级。
-proc make_pin_constraints {top_name xdc_path} {
-    set part [get_parts -quiet -filter "NAME =~ xcvu13p*"]
-    if {[llength $part] == 0} {
-        puts "ERROR: 器件库不支持 xcvu13p (原值已记录, 不擅自替换)"
-        exit 1
-    }
+# 为顶层生成引脚/时钟约束 (静态端口清单, 不依赖设计打开)。
+# 引脚为合成选择 (HP bank LVCMOS12, 无实板), 总线位名用 {} 保护以
+# 保证 XDC 重新解析安全 (F02 整改)。
+proc make_pin_constraints {top_name n_points xdc_path} {
     set pins [get_package_pins -filter "PIN_FUNC == IOB && BANK_TYPE == HP"]
     if {[llength $pins] == 0} {
         set pins [get_package_pins -filter "PIN_FUNC == IOB"]
     }
-    set ports [get_ports]
+    # 静态端口清单: fft32_top -> 512 bit, fft64_top -> 1024 bit
+    set nbytes [expr {2 * $n_points}]
+    set plist {}
+    lappend plist clk rst in_valid
+    for {set k 0} {$k < $nbytes} {incr k} { lappend plist "din\[$k\]" }
+    for {set k 0} {$k < $nbytes} {incr k} { lappend plist "dout\[$k\]" }
+    lappend plist out_valid
+    for {set k 0} {$k < 32} {incr k} { lappend plist "sat_cnt\[$k\]" }
+    if {[llength $plist] > [llength $pins]} {
+        puts "ERROR: 可用封装引脚不足 ([llength $pins] < [llength $plist])"
+        exit 1
+    }
     set f [open $xdc_path w]
     puts $f "# 自动生成: scripts/vivado/run_impl.tcl (合成引脚, 非真实板级)"
     set idx 0
-    foreach p $ports {
+    foreach p $plist {
         set pin [lindex $pins $idx]
         incr idx
-        if {$pin eq ""} {
-            puts "ERROR: 引脚数量不足"
-            exit 1
-        }
-        puts $f "set_property -dict {PACKAGE_PIN $pin IOSTANDARD LVCMOS12} \[get_ports $p\]"
+        puts $f "set_property -dict {PACKAGE_PIN $pin IOSTANDARD LVCMOS12} \[get_ports {$p}]"
     }
-    set clk [get_ports -quiet clk]
-    if {[llength $clk] > 0} {
-        puts $f "create_clock -period [expr {[set ::CLK_PERIOD_NS]}] -name sys_clk \[get_ports clk\]"
-    }
+    puts $f "create_clock -period $::CLK_PERIOD_NS -name sys_clk \[get_ports {clk}\]"
     close $f
-    puts "引脚约束: $xdc_path ([llength $ports] 端口)"
+    puts "引脚约束: $xdc_path ([llength $plist] 端口, 静态清单)"
 }

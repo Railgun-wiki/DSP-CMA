@@ -25,9 +25,11 @@ open_project [file join build/vivado dspcma.xpr]
 set_property top $TOP [current_fileset -simset]
 update_compile_order -fileset sim_1
 
-# xsim 运行目录非仓库根: 通过 plusarg 传入向量目录 (TB 支持 +vectors=)
+# xsim 运行目录非仓库根: 通过 plusarg 传入向量目录 (TB 支持 +vectors=)。
+# 注意 -value 必须用双引号让 [pwd] 真实展开 (F02 整改)。
+set VDIR [file normalize [file join [pwd] rtl tb vectors]]
 set_property -name {xsim.simulate.xsim.more_options} \
-    -value {-testplusarg vectors=[pwd]/rtl/tb/vectors} -objects [current_fileset -simset]
+    -value "-testplusarg vectors=$VDIR" -objects [current_fileset -simset]
 
 launch_simulation
 run all
