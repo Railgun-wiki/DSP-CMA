@@ -37,6 +37,9 @@ bash scripts/run_verilator.sh
 # 4) 规则检查（禁用 API/数据通路乘法/绝对路径/交付完整性）
 python3 scripts/check_rules.py
 
+# 4b) DSP48E2 包装与官方 unisim 声明的接口一致性
+python3 scripts/check_dsp_interface.py
+
 # 5) Vivado 补跑（需已安装 Vivado；xsim 4 个 TB + Implementation）
 bash scripts/vivado/run_all.sh fft32_top fft64_top
 ```
@@ -58,7 +61,7 @@ bash scripts/vivado/run_all.sh fft32_top fft64_top
 | B02 手写旋转因子 + 对称/周期优化 | PASS | 同上（误差 8e-16，特殊角 isequal） |
 | B03 快速卷积（用户指定信号/滤波器） | PASS | 同上 + `metrics_conv_demo.json`（OLA/OLS vs 直接 ≈ 4e-16） |
 | B04 重叠相加/保留边界 | PASS | 18 项边界用例（非整块/单点/长滤波器/尾部冲刷） |
-| B05 双偏振 4QAM 频域 CMA + DD-EVM | PASS | `metrics_tapsweep.json`、星座图/收敛曲线 |
+| B05 双偏振 4QAM 频域 CMA + DD-EVM | PASS | `metrics_tapsweep.json`、星座图/收敛曲线、`cma_outputs.mat`、`metrics_phase_diagnosis.json` |
 | B06 抽头长度 17/33/65 对照 | PASS | 同上（含解析圆环下限分析） |
 | H01–H03 全并行 32/64 点 RTL | PASS（功能仿真） | Verilator 回归 4 TB 全 PASS |
 | H04 3 拍乘法器原语（DSP48E2） | PASS（功能仿真） | `tb_dsp_mult3`（延迟=3 拍，2000 组逐位） |
@@ -68,6 +71,6 @@ bash scripts/vivado/run_all.sh fft32_top fft64_top
 
 ## 限制
 
-- 实验数据逐符号相位均匀随机（相干度 ≈ 0.01，见 `docs/report.md` §6）：DD-EVM 存在解析下限 44.65%，均衡后实测 45.7%（ISI 残余仅 +1 个百分点）——该下限由数据决定，不是均衡器缺陷。
+- 数据集的信道模型待认定：全局四次方相干度 ≈ 0.01，且均衡输出四次方序列存在滞后相关（滞后 1/64/256 ≈ 0.72，打乱对照 < 0.01），与"逐符号独立均匀相位"假设矛盾（见 `docs/report.md` §6）。"等模圆环+均匀相位"口径下的 44.65% 是**条件计算**而非数据集下限；实测 45.7% 与其接近是描述性观测。
 - Vivado 仿真/综合/Implementation 未在本机执行（无工具）；补跑命令与工程脚本已交付，未产生任何虚构的资源/时序数字。
 - CMA 抽头更新延迟仅承诺 `clk_dly=1`（与参考代码一致），其他值显式拒绝。
